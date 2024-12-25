@@ -1,6 +1,59 @@
 import json
 import re
 
+def parse_drug_synonyms_file(drug_synonyms_filepath):
+    """
+        assumption: 
+            file starts with actual data, no metadata -
+
+            D00AAN	TTDDRUID	D00AAN
+            D00AAN	DRUGNAME	8-O-(4-chlorobenzenesulfonyl)manzamine F
+            D00AAN	SYNONYMS	CHEMBL400717
+
+            D00AAU	TTDDRUID	D00AAU
+            D00AAU	DRUGNAME	3-[1-ethyl-2-(3-hydroxyphenyl)butyl]phenol
+            D00AAU	SYNONYMS	Metahexes trol
+    """
+
+    with open(drug_synonyms_filepath, 'r') as in_stream:
+        cur_mapping = {}
+        out = []
+        for line in in_stream:
+
+            line = line.strip()
+
+            # handle new line
+            if line == '':
+                if len(cur_mapping) != 0:
+                    out.append(cur_mapping)
+                cur_mapping = {}
+                continue
+            # ---------------------------------------------------------
+
+            # split line
+            token_list = line.split('\t')
+            prop_name = token_list[1]
+            prop_val = token_list[-1]
+            # ---------------------------------------------------------
+
+            if prop_name == 'TTDDRUID':
+                cur_mapping['ttd_drug_id'] = prop_val
+            elif prop_name == 'DRUGNAME':
+                cur_mapping['ttd_drug_name'] = prop_val
+            elif prop_name == 'SYNONYMS':
+                
+                if cur_mapping.get('ttd_drug_synonym') is None:
+                    cur_mapping['ttd_drug_synonym'] = []
+
+                cur_mapping['ttd_drug_synonym'].append(prop_val)
+        
+        # handle last mapping
+        if len(cur_mapping) != 0:
+            out.append(cur_mapping)
+        # ---------------------------------------------------------
+
+    return out
+
 def parse_drug_disease_map_file(drug_disease_map_filepath):
 
     """
@@ -38,6 +91,7 @@ def parse_drug_disease_map_file(drug_disease_map_filepath):
                 cur_mapping = {}
                 continue
             # ---------------------------------------------------------
+
             # split line
             token_list = line.split('\t')
             prop_name = token_list[0]
@@ -81,10 +135,16 @@ def parse_drug_disease_map_file(drug_disease_map_filepath):
     return out
 
 def main():
+
     drug_disease_map_filepath = '../data/P1-05-Drug_disease.txt'
     parsed_drug_disease_map = parse_drug_disease_map_file(drug_disease_map_filepath)
     with open('../out/drug_disease.json', 'w+') as out_stream:
         json.dump(parsed_drug_disease_map, out_stream, indent=4)
+
+    drug_synonym_filepath = '../data/P1-04-Drug_synonyms.txt'
+    parsed_drug_synonyms = parse_drug_synonyms_file(drug_synonym_filepath)
+    with open('../out/drug_synonym.json', 'w+') as out_stream:
+        json.dump(parsed_drug_synonyms, out_stream, indent=4)
 
 if __name__ == '__main__':
     main()
