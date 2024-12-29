@@ -1,13 +1,21 @@
+#!/bin/bash
+
+set -e
 source ../dev.env
 BASE_DIR=$(pwd)
 CONTAINER_NAME=postgres-container
-    
+
 function post_deploy(){
+	set -x
+	set -e
+
+	export PGHOST=$POSTGRES_HOST
+	export PGPORT=$POSTGRES_PORT
+	export PGUSER=$POSTGRES_ROOT_USER
+	export PGPASSWORD=$POSTGRES_ROOT_PASSWORD
+	export PGDATABASE=$POSTGRES_ROOT_DB
+	
 	psql \
-		-h $POSTGRES_HOST \
-		-p $POSTGRES_PORT \
-		-U $POSTGRES_ROOT_USER \
-		-d $POSTGRES_ROOT_DB \
 		-v POSTGRES_NONROOT_DB=$POSTGRES_NONROOT_DB \
 		-v POSTGRES_NONROOT_USER=$POSTGRES_NONROOT_USER \
 		-v POSTGRES_NONROOT_PASSWORD=$POSTGRES_NONROOT_PASSWORD \
@@ -21,7 +29,8 @@ function deploy(){
 
 	mkdir -p $POSTGRES_MOUNT_DIR
 
-	docker run --name $CONTAINER_NAME \
+	docker run \
+		--name $CONTAINER_NAME \
 		-p 5432:5432 \
 		-e POSTGRES_PASSWORD=$POSTGRES_ROOT_PASSWORD \
 		-v $POSTGRES_MOUNT_DIR:/var/lib/postgresql/data \
